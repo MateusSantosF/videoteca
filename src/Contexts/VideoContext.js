@@ -1,5 +1,6 @@
 import { Children, createContext, useState } from "react";
 import Form from "../Components/Form";
+import { useAxios } from "../Hooks/useAxios";
 import api from '../Services/api'
 
 export const VideoContext = createContext();
@@ -7,6 +8,9 @@ export const VideoContext = createContext();
 
 
 export function VideoContextProvider({children}){
+
+
+    const {data, mutate} = useAxios('videos')
 
     const [openFormModel, setFormModel] = useState(false)
     const [title, setTitle] = useState('')
@@ -37,11 +41,23 @@ export function VideoContextProvider({children}){
         const video = { title, link, liked:false}
 
         if(videoId){
+
             api.put(`videos/${videoId}`, video);
+            const updatedVideos = data.map(video =>{
+                if( video.id === videoId){
+                    return {...video, title,link}
+                }
+                return video
+            })
+         
+            mutate(updatedVideos, false)
         }else{
             api.post('videos', video)
+
+            const updatedVideos = [...data, video]
+            mutate(updatedVideos, false)
         }
-        
+        setVideoId(false)
         closeModal()        
     }
 
@@ -53,11 +69,25 @@ export function VideoContextProvider({children}){
 
             api.patch(`videos/${videoId}`, video);
         })
+    
         
+        const updatedVideos = data.map( (video) =>{
+            
+            if(video.id === videoId){
+                return {...video, liked:!video.liked};
+            }
+            return video;
+
+        })
+
+        mutate(updatedVideos, false)
     }
 
     function handleDelete(videoId){
         api.delete(`videos/${videoId}`);
+
+        const nonDeletedVideos = data.filter( video => (video.id !== videoId))
+        mutate(nonDeletedVideos, false)
     }
 
     function handleEdit(videoId, videoTitle, videoLink){
